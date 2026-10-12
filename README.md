@@ -1,4 +1,4 @@
-![image](NumLP Framework.png)
+![image](NumLP_Framework.png)
 
 
 # NumLP
