@@ -1,3 +1,0 @@
-train.py修改了TransE的维度，250->1000
-data_construct.py重构了divide_valid函数
-entity_reconstruct.py用于添加数值属性到实体描述
