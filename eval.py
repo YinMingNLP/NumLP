@@ -46,7 +46,6 @@ class Evaluator:
 
     @torch.no_grad()
     def eval_greedy(self, dataset: KGDataset):
-        # self.tokenizer.padding_side = 'left'
         self.model.eval()
 
         preds = []
@@ -64,24 +63,24 @@ class Evaluator:
                 if self.args.model_class == 'AutoModelForCausalLM':
                     inputs = self.tokenizer(prompt, return_tensors='pt')
                     input_ids = inputs.input_ids.cuda()
-                    attention_mask = inputs.attention_mask.cuda()  # 【新增】获取 mask
+                    attention_mask = inputs.attention_mask.cuda()
                     input_len = input_ids.shape[-1]
                     output = self.model.generate(
                         input_ids=input_ids,
-                        attention_mask=attention_mask,  # 【新增】传入 mask
-                        pad_token_id=self.tokenizer.eos_token_id,  # 【新增】传入 pad token
+                        attention_mask=attention_mask,
+                        pad_token_id=self.tokenizer.eos_token_id,
                         generation_config=self.generation_config
                     )
                     generated.append(output.sequences[0, input_len:].cpu().numpy().tolist())
                 if self.args.model_class == 'KGEQwen':
                     inputs = self.tokenizer(prompt, return_tensors='pt')
-                    input_ids = inputs.input_ids.cuda()  # (1, input_len)
-                    attention_mask = inputs.attention_mask.cuda()  # 【新增】获取 mask
+                    input_ids = inputs.input_ids.cuda()
+                    attention_mask = inputs.attention_mask.cuda()
 
                     output = self.model.generate(
                         input_ids=input_ids,
-                        attention_mask=attention_mask,  # 【新增】传入 mask
-                        pad_token_id=self.tokenizer.eos_token_id,  # 【新增】传入 pad token
+                        attention_mask=attention_mask,
+                        pad_token_id=self.tokenizer.eos_token_id,
                         query_ids=torch.LongTensor([ex['query_id']]).to(input_ids.device),
                         entity_ids=torch.LongTensor([ex['entity_ids']]).to(input_ids.device),
                         generation_config=self.generation_config,
@@ -120,9 +119,7 @@ class Evaluator:
                 logger.info(f'num: {ranks_.shape[0]}; {metrics}')
 
             logger.info('=' * 80)
-            # 打印 KGC 指标
             compute_metrics(raw_ranks)
-            # 打印 LLM 指标
             compute_metrics(ranks)
 
         return preds
@@ -148,12 +145,10 @@ if __name__ == '__main__':
     else:
         args.embedding_dim = 200
 
-    # checkpoint_dir: .../checkpoint-xxxx/adapter_model
     logger = get_logger(os.path.dirname(args.checkpoint_dir))
     logger.info('args=>')
     logger.info(json.dumps(vars(args), ensure_ascii=False, indent=4))
 
-    # tokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path, use_fast=False, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -165,14 +160,12 @@ if __name__ == '__main__':
                                                      trust_remote_code=True)
         model = PeftModel.from_pretrained(model, args.checkpoint_dir)
     if args.model_class == 'KGEQwen':
-        # Qwen2.5 的 bos_token_id 可能为空，加一个判断防止报错
+
         if tokenizer.bos_token_id is not None:
             generation_config.bos_token_id = tokenizer.bos_token_id
 
-        # 加载底座模型
         model = AutoModelForCausalLM.from_pretrained(args.model_name_or_path, low_cpu_mem_usage=True,
                                                      device_map='auto', trust_remote_code=True)
-        # 加载 LoRA 权重
         model = PeftModel.from_pretrained(model, args.checkpoint_dir)
 
         llm_config = model.config
@@ -181,7 +174,7 @@ if __name__ == '__main__':
         embed_model = EmbeddingModel(
             kge_embedding_dir,
             args.embedding_dim,
-            NUM_FEATURE_SIZE,  # [新增传参]
+            NUM_FEATURE_SIZE,
             1024,
             llm_config.hidden_size,
             llm_config.hidden_act
