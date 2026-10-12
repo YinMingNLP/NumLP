@@ -1,5 +1,4 @@
-![image](NumLP_Framework.png)
-
+![image](Framework.png)
 
 # NumLP
 Breaking the Representation Barrier: LLM-Empowered Link Prediction on Knowledge Graphs with Numeric Literals
